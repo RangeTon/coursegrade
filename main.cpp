@@ -29,6 +29,11 @@ using std::ranges::stable_sort;
 
 #include <ranges>
 #include <numeric>
+#include <exception>
+using std::exception;
+using std::runtime_error;
+using std::domain_error;
+using std::invalid_argument;
 
 //顶层分解
 struct Grade; //类型声明
@@ -38,13 +43,19 @@ extern void read(CourseGrade& cg);
 extern void computeSort(CourseGrade& cg);
 extern void print(CourseGrade& cg);
 
+// 第1次重构，添加错误处理
 int main()
 {
     CourseGrade courseGrade;
-
-    read(courseGrade);
-    computeSort(courseGrade);
-    print(courseGrade);
+    try {
+        read(courseGrade);
+        computeSort(courseGrade);
+        print(courseGrade);
+    } catch (const exception& e) {
+        print("error: {}\n", e.what());
+    } catch (...) {
+        print("Other error!\n");
+    }
 
     return 0;
 }
@@ -58,20 +69,21 @@ struct Grade //类型定义
     double total; //总成绩，该数据成员可声明，也可不用声明
 };
 
-// 第二层分解，暂时不考虑错误处理
+// 第二层分解，添加错误检测
 extern istream& operator>>(istream& is, Grade& g);
 void read(CourseGrade& cg)
 {
     print("Reading all student grades (name midterm final homework) from a file... \n");
     ifstream ifs("../../coursegrade.dat");
+    if(!ifs) throw runtime_error("fail to open file");
     // read and store all the grades
     string line;
     istringstream iss;
-    while (std::getline(ifs, line)) { // std::getline按行读取成功时，返回good的ifs
-        iss.str(line); // 字符串输入流iss封装字符串line进行流式输入
-        Grade g; // 假定能够对g进行iss >> g读取操作
+    while (std::getline(ifs, line)) {          // std::getline按行读取成功时，返回good的ifs
+        iss.str(line);                         // 字符串输入流iss封装字符串line进行流式输入
+        Grade g;                               // 假定能够对g进行iss >> g读取操作
         if (iss >> g) {
-            cg.push_back(g); // 读取成绩成功后，添加g到cg中
+            cg.push_back(g);                   // 读取成绩成功后，添加g到cg中
         } else {
             iss.clear();
         }
@@ -102,16 +114,22 @@ void print(CourseGrade& cg)
     }
 }
 
-// 第三层分解，暂时不考虑错误处理
+// 第三层分解，添加错误检测
 istream& operator>>(istream& is, Grade& g)
 {
     print("  Reading a student grade... ");
     if (is) is >> g.name >> g.midterm >> g.final;
+    if(!is.eof()&&is.fail())
+        throw invalid_argument("Incorrect name, midterm and final grade.");
+
     if (is) {
         for (double h; is >> h;)
             g.homework.push_back(h);
 
-        if (is.eof()) {
+        if(!is.eof() && is.fail())
+            throw invalid_argument("Incorrect homework grade.");
+
+        if(is.eof() && g.homework.size() != 0) {
             is.clear();
             print("Done!  {}\n", g.name);
         }
