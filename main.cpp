@@ -27,6 +27,8 @@ using std::istringstream;
 #include <algorithm>
 using std::ranges::stable_sort;
 
+#include <ranges>
+#include <numeric>
 
 //顶层分解
 struct Grade; //类型声明
@@ -105,28 +107,53 @@ istream& operator>>(istream& is, Grade& g)
 {
     print("  Reading a student grade... ");
     if (is) is >> g.name >> g.midterm >> g.final;
-    if (is){
-        for (double h;is >> h;)
+    if (is) {
+        for (double h; is >> h;)
             g.homework.push_back(h);
 
-        if(is.eof()) {
+        if (is.eof()) {
             is.clear();
             print("Done!  {}\n", g.name);
         }
     }
-    if(!is) print("Error!\n");
+    if (!is) print("Error!\n");
     return is;
 }
 
-extern double median(vector<double> vec);
+template<typename T>
+concept Numeric = std::integral<T> || std::floating_point<T>;
+
+template<std::ranges::forward_range R>
+    requires Numeric<std::ranges::range_value_t<R>>
+double median(R&& data);
 double score(Grade& g)
 {
     return 0.2 * g.midterm + 0.4 * g.final + 0.4 * median(g.homework);
 }
 
-// 第四层的未知计算
-double median(vector<double> vec)
+// 第四层分解
+
+template <std::ranges::forward_range R>
+    requires Numeric<std::ranges::range_value_t<R>>
+double median(R&& data)
 {
-    // todo
-    return 0.0;
+    auto temp = std::ranges::to<std::vector<double>>(data);// 创建一个临时容器temp
+
+    if (temp.empty())
+        throw std::domain_error("median of an empty range");
+
+    auto size = std::ssize(temp);
+    // 计算无序范围中值
+    auto mid = temp.begin() + size / 2;
+    std::ranges::nth_element(temp, mid); // nth_element使用了Quickselect算法
+    // 来计算无序范围中值，Avg. TC = O(N)
+
+    if (size % 2 != 0) {
+        return *mid;
+    }
+    // 提取左中值：前半部分的最大值
+    auto left_max = std::ranges::max_element(temp.begin(), mid);
+    // 使用 std::midpoint 防止极端值相加溢出
+    return std::midpoint(*left_max, *mid);
 }
+
