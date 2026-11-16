@@ -7,10 +7,26 @@
 // CourseGrade calculation using a top-down, stepwise refinement approach
 
 #include <vector>
-#include <string>
-
 using std::vector;
+
+#include <string>
 using std::string;
+
+#include <print>
+using std::print;
+
+#include <istream>
+using std::istream;
+
+#include <fstream>
+using std::ifstream;
+
+#include <sstream>
+using std::istringstream;
+
+#include <algorithm>
+using std::ranges::stable_sort;
+
 
 //顶层分解
 struct Grade; //类型声明
@@ -40,16 +56,59 @@ struct Grade //类型定义
     double total; //总成绩，该数据成员可声明，也可不用声明
 };
 
-// 第二层的未知计算
+// 第二层分解，暂时不考虑错误处理
+extern istream& operator>>(istream& is, Grade& g);
 void read(CourseGrade& cg)
 {
-    // todo
+    print("Reading all student grades (name midterm final homework) from a file... \n");
+    ifstream ifs("../../coursegrade.dat");
+    // read and store all the grades
+    string line;
+    istringstream iss;
+    while (std::getline(ifs, line)) { // std::getline按行读取成功时，返回good的ifs
+        iss.str(line); // 字符串输入流iss封装字符串line进行流式输入
+        Grade g; // 假定能够对g进行iss >> g读取操作
+        if (iss >> g) {
+            cg.push_back(g); // 读取成绩成功后，添加g到cg中
+        } else {
+            iss.clear();
+        }
+    }
+    if(ifs.eof()) print("Reading done!\n\n");  // 读取完毕则打印
 }
+
+extern double score(Grade& g);
 void computeSort(CourseGrade& cg)
 {
-    // todo
+    print("Processing all student grades... \n");
+    for(auto& g: cg){
+        g.total = score(g);  //假定能够进行score(g)操作
+    }
+    stable_sort(cg, [](auto& g1, auto& g2){
+        return g1.total <= g2.total;
+    });
+    print("Processing done!\n\n");
 }
+
+
 void print(CourseGrade& cg)
 {
+    print("Course: {}\nCredit: {}\n", "software construction and implementation", 5);
+    print("name      total\n");
+    for(auto &g: cg){
+        print("{:<10}{:<.1f}\n", g.name, g.total);
+    }
+}
+
+// 第三层的未知计算
+istream& operator>>(istream& is, Grade& g)
+{
     // todo
+    return is;
+}
+
+double score(Grade& g)
+{
+    // todo
+    return 0.0;
 }
